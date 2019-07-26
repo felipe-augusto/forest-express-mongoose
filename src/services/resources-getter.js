@@ -81,31 +81,10 @@ function ResourcesGetter(model, opts, params) {
     });
   }
 
-  function handleFilterParams(jsonQuery) {
-    const operator = `$${params.filterType}`;
-    const conditions = [];
-
-    _.each(params.filter, (values, key) => {
-      const filterConditions = new FilterParser(model, opts, params.timezone).perform(key, values);
-      _.each(filterConditions, condition => conditions.push(condition));
-    });
-
-    _.each(schema.fields, (field) => {
-      if (field.reference) {
-        const condition = populateWhere(field);
-        if (condition) {
-          conditions.push(condition);
-        }
-      }
-    });
-
-    if (conditions.length) {
-      jsonQuery.push({ [operator]: conditions });
-    }
-  }
-
-  function handleFiltersParams(query) {
-    query.where(new FiltersParser(model, params.filters, params.timezone, opts).perform());
+  function handleFiltersParams(conditions) {
+    const filtersConditions = new FiltersParser(model, params.filters, params.timezone, opts)
+      .perform();
+    if (filtersConditions) conditions.push(filtersConditions);
   }
 
   function handleSortParam(jsonQuery) {
@@ -126,17 +105,14 @@ function ResourcesGetter(model, opts, params) {
       searchBuilder.getWhere(conditions);
     }
 
-    if (params.filter) {
-      handleFilterParams(conditions);
-    }
-
     if (params.filters) {
-      handleFiltersParams(jsonQuery);
+      handleFiltersParams(conditions);
     }
 
     if (segment) {
       conditions.push(segment.where);
     }
+
     if (conditions.length) {
       jsonQuery.push({
         $match: {
@@ -209,7 +185,7 @@ function ResourcesGetter(model, opts, params) {
       jsonQuery.push({ $group: { _id: null, count: { $sum: 1 } } });
       jsonQuery.push({ $project: { _id: 0 } });
       return model.aggregate(jsonQuery)
-        .then(result => result[0].count);
+        .then(result => (result[0] ? result[0].count : 0));
     });
 }
 
