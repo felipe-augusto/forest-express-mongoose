@@ -35,7 +35,7 @@ function PieStatGetter(model, params, opts) {
       const query = model.aggregate();
 
       if (params.filters) {
-        query.match(new FiltersParser(model, params.filters, params.timezone, opts).perform());
+        query.match(new FiltersParser(model, params.timezone, opts).perform(params.filters));
       }
 
       let sum = 1;

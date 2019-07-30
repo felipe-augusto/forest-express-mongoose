@@ -179,7 +179,7 @@ function LineStatFinder(model, params, opts) {
       let query = model.aggregate();
 
       if (params.filters) {
-        query.where(new FiltersParser(model, params.filters, params.timezone, opts).perform());
+        query.where(new FiltersParser(model, params.timezone, opts).perform(params.filters));
       }
 
       if (params.group_by_date_field) {

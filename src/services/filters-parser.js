@@ -1,55 +1,32 @@
 import _ from 'lodash';
-import Interface from 'forest-express';
+import Interface, { BaseFiltersParser } from 'forest-express';
 import OperatorDateIntervalParser from './operator-date-interval-parser';
 import { NoMatchingOperatorError, InvalidFiltersFormatError } from './errors';
 import utils from '../utils/schema';
 
 const AGGREGATOR_OPERATORS = ['and', 'or'];
 
-function FiltersParser(model, filtersString, timezone, options) {
+function FiltersParser(model, timezone, options) {
   this.operatorDateIntervalParser = new OperatorDateIntervalParser(timezone);
-  try {
-    this.filters = filtersString ? JSON.parse(filtersString) : null;
-  } catch (error) {
-    throw new InvalidFiltersFormatError('Invalid filters JSON format');
-  }
 
+  this.perform = filtersString => BaseFiltersParser
+    .perform(filtersString, this.formatAggregation, this.formatCondition);
 
-  this.perform = () => {
-    if (!this.filters) return null;
-
-    return this.formatAggregation(this.filters);
-  };
-
-  this.formatAggregation = (node) => {
-    if (_.isEmpty(node)) throw new InvalidFiltersFormatError('Empty condition in filter');
-
-    if (!node.aggregator) return this.formatCondition(node);
-    if (node.conditions.length === 0) return null;
-
-    const formatedAggregator = {};
-    const formatedConditions = [];
-
-    node.conditions.forEach(condition =>
-      formatedConditions.push(this.formatAggregation(condition)));
-
-    const aggregatorOperator = this.formatAggregatorOperator(node.aggregator);
-
-    formatedAggregator[aggregatorOperator] = formatedConditions;
-    return formatedAggregator;
+  this.formatAggregation = (aggregator, formatedConditions) => {
+    const aggregatorOperator = this.formatAggregatorOperator(aggregator);
+    return { [aggregatorOperator]: formatedConditions };
   };
 
   this.formatCondition = (condition) => {
-    if (_.isEmpty(condition)) throw new InvalidFiltersFormatError('Empty condition in filter');
-    if (!condition.field) throw new InvalidFiltersFormatError('Bad condition format: missing field');
-
-    const formatedCondition = {};
     const formatedField = this.formatField(condition.field);
 
-    formatedCondition[formatedField] =
-      this.formatOperatorValue(condition.field, condition.operator, condition.value);
-
-    return formatedCondition;
+    return {
+      [formatedField]: this.formatOperatorValue(
+        condition.field,
+        condition.operator,
+        condition.value,
+      ),
+    };
   };
 
   this.parseFunction = (key) => {

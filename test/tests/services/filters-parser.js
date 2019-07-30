@@ -48,7 +48,7 @@ describe('Service > ResourcesGetter', () => {
 
         IslandModel = mongoose.model('Island', IslandSchema);
 
-        defaultParser = new FiltersParser(IslandModel, null, timezone, options);
+        defaultParser = new FiltersParser(IslandModel, timezone, options);
         return IslandModel.remove({});
       })
       .then(() => {
@@ -74,10 +74,6 @@ describe('Service > ResourcesGetter', () => {
   after((done) => {
     mongoose.connection.close();
     done();
-  });
-
-  describe('initialization', () => {
-    expect(() => new FiltersParser(IslandModel, '{ filters', '', options)).to.throw(InvalidFiltersFormatError);
   });
 
   describe('formatAggregation function', () => {

@@ -4,7 +4,6 @@ import Interface from 'forest-express';
 import OperatorValueParser from './operator-value-parser';
 import SearchBuilder from './search-builder';
 import FiltersParser from './filters-parser';
-import FilterParser from './filter-parser';
 import utils from '../utils/schema';
 import mongooseUtils from './mongoose-utils';
 
@@ -81,12 +80,6 @@ function ResourcesGetter(model, opts, params) {
     });
   }
 
-  function handleFiltersParams(conditions) {
-    const filtersConditions = new FiltersParser(model, params.filters, params.timezone, opts)
-      .perform();
-    if (filtersConditions) conditions.push(filtersConditions);
-  }
-
   function handleSortParam(jsonQuery) {
     const order = params.sort.startsWith('-') ? -1 : 1;
     let sortParam = order > 0 ? params.sort : params.sort.substring(1);
@@ -100,13 +93,14 @@ function ResourcesGetter(model, opts, params) {
     const jsonQuery = [];
     handlePopulate(jsonQuery);
 
-    const conditions = [];
+    let conditions = [];
     if (params.search) {
       searchBuilder.getWhere(conditions);
     }
 
     if (params.filters) {
-      handleFiltersParams(conditions);
+      conditions = conditions.concat(new FiltersParser(model, params.timezone, opts)
+        .perform(params.filters));
     }
 
     if (segment) {
